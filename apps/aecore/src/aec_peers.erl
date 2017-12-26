@@ -434,12 +434,11 @@ handle_cast({add_and_ping, PeerRecs}, State) ->
       fun(P0) ->
               %% need to fetch the stored peer record to get proper block
               %% status
-              Key = hash_uri(P0#peer.uri),
               case lookup_peer(P0#peer.uri, State1) of
                   none ->
                       lager:debug("Couldn't find just added ~p", [P0#peer.uri]),
                       ok;
-                  {value, Key, Peer} ->
+                  {value, _Key, Peer} ->
                       case has_been_seen_(Peer) of
                           true -> ok;
                           false ->
