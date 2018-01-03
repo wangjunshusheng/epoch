@@ -1,7 +1,7 @@
 %%%=============================================================================
 %%% @copyright 2017, Aeternity Anstalt
 %%% @doc
-%%%    Module storing peers list and providing funtionc for peers interaction
+%%%    Module storing peers list and providing funtions for peers interaction.
 %%% @end
 %%%=============================================================================
 -module(aec_peers).
@@ -51,14 +51,14 @@
 %%------------------------------------------------------------------------------
 %% Add peer by url or supplying full peer() record. Try to connect.
 %%------------------------------------------------------------------------------
--spec add(uri() | peer()) -> ok.
+-spec add(http_uri:uri() | peer()) -> ok.
 add(Peer) ->
     add(Peer, true).
 
 %%------------------------------------------------------------------------------
 %% Add peer by url or supplying full peer() record. Connect if `Connect==true`
 %%------------------------------------------------------------------------------
--spec add(uri() | peer(), boolean()) -> ok.
+-spec add(http_uri:uri() | peer(), boolean()) -> ok.
 add(Peer, Connect) when is_boolean(Connect) ->
     gen_server:cast(?MODULE, {add, peer_record(Peer), Connect}),
     ok.
@@ -72,7 +72,7 @@ add(Peer, Connect) when is_boolean(Connect) ->
 %% (and the 'uri' elem in the record reveals which is the origin and which
 %% is the alias; this usually doesn't matter.)
 %%------------------------------------------------------------------------------
--spec register_source(uri() | peer(), uri()) -> ok.
+-spec register_source(http_uri:uri() | peer(), uri()) -> ok.
 register_source(Peer, Alias) ->
     gen_server:cast(?MODULE, {source, normalize_uri(uri(Peer)),
                               normalize_uri(Alias)}),
@@ -81,43 +81,43 @@ register_source(Peer, Alias) ->
 %%------------------------------------------------------------------------------
 %% Add peer by url or supplying full peer() record. Connect if `Connect==true`
 %%------------------------------------------------------------------------------
--spec add_and_ping_peers([uri()]) -> ok.
-add_and_ping_peers(Peers) ->
-    case [peer_record(P) || P <- Peers] of
+-spec add_and_ping_peers([http_uri:uri()]) -> ok.
+add_and_ping_peers(Uris) ->
+    case [peer_record(Uri) || Uri <- Uris] of
         [] -> ok;
-        [_|_] = PeerRecs ->
-            gen_server:cast(?MODULE, {add_and_ping, PeerRecs})
+        Peers when is_list(Peers) ->
+            gen_server:cast(?MODULE, {add_and_ping, Peers})
     end.
 
 %%------------------------------------------------------------------------------
 %% Block peer
 %%------------------------------------------------------------------------------
--spec block_peer(uri()) -> ok.
-block_peer(PeerUri) ->
-    gen_server:cast(?MODULE, {block, normalize_uri(uri(PeerUri))}),
+-spec block_peer(http_uri:uri()) -> ok.
+block_peer(Uri) ->
+    gen_server:cast(?MODULE, {block, normalize_uri(uri(Uri))}),
     ok.
 
 %%------------------------------------------------------------------------------
 %% Unblock peer
 %%------------------------------------------------------------------------------
--spec unblock_peer(uri()) -> ok.
-unblock_peer(PeerUri) ->
-    gen_server:cast(?MODULE, {unblock, normalize_uri(uri(PeerUri))}),
+-spec unblock_peer(http_uri:uri()) -> ok.
+unblock_peer(Uri) ->
+    gen_server:cast(?MODULE, {unblock, normalize_uri(uri(Uri))}),
     ok.
 
 %%------------------------------------------------------------------------------
 %% Check if peer is blocked
 %%------------------------------------------------------------------------------
--spec is_blocked(uri()) -> boolean().
-is_blocked(PeerUri) ->
-    gen_server:call(?MODULE, {is_blocked, normalize_uri(uri(PeerUri))}).
+-spec is_blocked(http_uri:uri()) -> boolean().
+is_blocked(Uri) ->
+    gen_server:call(?MODULE, {is_blocked, normalize_uri(uri(Uri))}).
 
 %%------------------------------------------------------------------------------
 %% Remove peer by url
 %%------------------------------------------------------------------------------
--spec remove(uri()) -> ok.
-remove(PeerUri) ->
-    gen_server:cast(?MODULE, {remove, normalize_uri(uri(PeerUri))}),
+-spec remove(http_uri:uri()) -> ok.
+remove(Uri) ->
+    gen_server:cast(?MODULE, {remove, normalize_uri(uri(Uri))}),
     ok.
 
 %%------------------------------------------------------------------------------
@@ -132,22 +132,22 @@ info() ->
 %% Normally returns {ok, Peer}
 %% If peer not found gives {error, "peer unknown"}
 %%------------------------------------------------------------------------------
--spec info(uri()) -> get_peer_result().
-info(PeerUri) ->
-    gen_server:call(?MODULE, {info, normalize_uri(uri(PeerUri))}).
+-spec info(http_uri:uri()) -> get_peer_result().
+info(Uri) ->
+    gen_server:call(?MODULE, {info, normalize_uri(uri(Uri))}).
 
 %%------------------------------------------------------------------------------
 %% Get list of all peers. The list may be big. Use with caution.
 %% Consider using get_random instead.
 %%------------------------------------------------------------------------------
--spec all() -> list(peer()).
+-spec all() -> list(http_uri:uri()).
 all() ->
     gen_server:call(?MODULE, all).
 
 %%------------------------------------------------------------------------------
 %% Get list of all aliases. The list may be big. Use with caution.
 %%------------------------------------------------------------------------------
--spec aliases() -> list({uri(), uri()}).
+-spec aliases() -> list({http_uri:uri(), http_uri:uri()}).
 aliases() ->
     gen_server:call(?MODULE, aliases).
 
@@ -183,7 +183,7 @@ get_random(N) when is_integer(N), N >= 0 ->
 %% so we can find a random peer by choosing a point and getting the next peer in gb_tree.
 %% That's what this function does
 %%------------------------------------------------------------------------------
--spec get_random(all | non_neg_integer(), [peer() | uri()]) -> [peer()].
+-spec get_random(all | non_neg_integer(), [peer() | http_uri:uri()]) -> [peer()].
 get_random(all, Exclude) when is_list(Exclude) ->
     gen_server:call(?MODULE, {get_random, all, Exclude});
 get_random(N, Exclude) when is_integer(N), N >= 0, is_list(Exclude) ->
@@ -192,7 +192,7 @@ get_random(N, Exclude) when is_integer(N), N >= 0, is_list(Exclude) ->
 %%------------------------------------------------------------------------------
 %% Get uri of peer
 %%------------------------------------------------------------------------------
--spec uri(peer() | uri()) -> uri().
+-spec uri(peer() | http_uri:uri()) -> http_uri:uri().
 uri(#peer{uri = Uri}) ->
     Uri;
 uri(Uri) when is_list(Uri) ->
@@ -211,14 +211,14 @@ set_local_peer_uri(Peer) ->
 %%------------------------------------------------------------------------------
 %% Set our own peer address
 %%------------------------------------------------------------------------------
--spec get_local_peer_uri() -> uri().
+-spec get_local_peer_uri() -> http_uri:uri().
 get_local_peer_uri() ->
     gen_server:call(?MODULE, get_local_peer_uri).
 
 %%------------------------------------------------------------------------------
 %% Update `last_seen` timestamp
 %%------------------------------------------------------------------------------
--spec update_last_seen(uri()) -> ok.
+-spec update_last_seen(http_uri:uri()) -> ok.
 update_last_seen(Uri) ->
     gen_server:cast(?MODULE, {update_last_seen, uri(Uri), timestamp()}).
 
