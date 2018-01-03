@@ -318,7 +318,8 @@ handle_call({is_blocked, Uri}, _From, #state{blocked = Blocked} = State) ->
             end
     end;
 handle_call(all, _From, State) ->
-    {reply, gb_trees:values(State#state.peers), State};
+    Uris = [ uri(Peer) || Peer <-  gb_trees:values(State#state.peers) ],
+    {reply, Uris, State};
 handle_call(aliases, _From, State) ->
     {reply, gb_trees:to_list(State#state.aliases), State};
 handle_call({get_random, N, Exclude}, _From, State) ->
