@@ -738,7 +738,7 @@ enter_peer(_Key, Peer, #state{aliases = As, peers = Peers} = State) ->
 insert_peers(PRecs, #state{} = S) ->
     lists:foldl(
       fun(#peer{uri = Uri} = P, #state{} = Sx) ->
-              case is_local_uri(Uri, Sx) of
+              case is_local_uri(Uri, Sx) orelse is_blocked(P, Sx) of
                   false ->
                       try_insert_peer(P, Sx);
                   _Other ->
@@ -774,6 +774,12 @@ check_block_status(#peer{uri = Uri} = P, Blocked) ->
                end,
     BlockFlag = P#peer.blocked orelse Preblocked,
     {P#peer{blocked = BlockFlag}, Blocked1}.
+
+is_blocked(Peer, #state{blocked = Blocked} = State) ->
+    Uri = uri(Peer),
+    lager:debug("Check for blocked ~p in ~p\n", [Uri, State]), 
+    %% Check whether it is an alias and if so, check whether it is blocked.
+    gb_sets:is_element(Uri, Blocked).
 
 
 log_ping_and_set_reping(Res, CalcF, Uri, Time, State) ->
