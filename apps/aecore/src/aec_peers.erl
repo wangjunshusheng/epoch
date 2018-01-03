@@ -40,6 +40,9 @@
 -endif.
 
 -include("peers.hrl").
+-define(MIN_PING_INTERVAL,   3000).
+-define(MAX_PING_INTERVAL, 120000).
+
 
 -type uri() :: http_uri:uri().
 -type get_peer_result() :: {ok, peer()} | {error, string()}.
@@ -242,21 +245,17 @@ check_env_(UKey, AKey) ->
     end.
 
 check_ping_interval_env() ->
-    {DefMin, DefMax} =
-        aeu_env:get_env(aecore, ping_interval_limits, ping_interval_default()),
-    Min = case aeu_env:user_config(
-                 [<<"sync">>,<<"ping_interval">>,<<"min">>]) of
-              {ok, Min1} -> Min1;
-              undefined  -> DefMin
+    {DefMin, DefMax} = ping_interval_limits(),
+    Min = case aeu_env:user_config([<<"sync">>,<<"ping_interval">>,<<"min">>]) of
+              {ok, UserMin} -> UserMin;
+              undefined -> DefMin
           end,
-    Max = case aeu_env:user_config(
-                 [<<"sync">>,<<"ping_interval">>,<<"max">>]) of
-              {ok, Max1} -> Max1;
-              undefined  -> DefMax
+    Max = case aeu_env:user_config([<<"sync">>,<<"ping_interval">>,<<"max">>]) of
+              {ok, UserMax} -> UserMax;
+              undefined -> DefMax
           end,
     application:set_env(aecore, ping_interval_limits, {Min, Max}).
 
-ping_interval_default() -> {3000, 120000}.
 
 %%%=============================================================================
 %%% gen_server functions
@@ -865,12 +864,12 @@ calc_retry(_, Min) ->
     Min.
 
 ping_interval_limits() ->
-    Default = ping_interval_default(),
+    Default = {?MIN_PING_INTERVAL, ?MAX_PING_INTERVAL},
     case aeu_env:get_env(aecore, ping_interval_limits, Default) of
-        {Min, Max} = Res when is_integer(Min),
-                              is_integer(Max),
-                              Max >= Min ->
-            Res;
+        {Min, Max} when is_integer(Min),
+                        is_integer(Max),
+                        Max >= Min ->
+            {Min, Max};
         Other ->
             lager:debug("invalid ping limits: ~p; using default (~p)",
                         [Other, Default]),
