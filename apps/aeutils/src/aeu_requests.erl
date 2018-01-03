@@ -101,7 +101,7 @@ transactions(Peer) ->
 tx_response({ok, #{'Transactions' := Txs}}) -> Txs;
 tx_response({ok, [#{<<"tx">> := _}|_] = Txs}) -> Txs;
 tx_response({ok, []}) -> [];
-tx_response(Other) -> bad_result.
+tx_response(_Other) -> bad_result.
 
 
 -spec send_block(aec_peers:peer(), aec_blocks:block()) -> response(ok).
@@ -173,7 +173,7 @@ check_returned_source(#{<<"source">> := Source}, Peer) ->
 
 -spec pp_uri({http_uri:schema(), http_uri:host(), http_uri:port()}) -> string().  %% TODO: | unicode:unicode_binary().
 pp_uri({Schema, Host, Port}) when is_binary(Host) ->
-  pp_uri({Schema, binary_to_list(Host), Port});
+    pp_uri({Schema, binary_to_list(Host), Port});
 pp_uri({Schema, Host, Port}) ->
     atom_to_list(Schema) ++ "://" ++ Host ++ ":" ++ integer_to_list(Port) ++ "/".
 
