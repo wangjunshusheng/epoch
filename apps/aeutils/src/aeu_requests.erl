@@ -43,11 +43,8 @@ ping(Peer) ->
         {ok, Map} ->
             lager:debug("ping response (~p): ~p", [Uri, pp(Map)]),
             case aec_sync:compare_ping_objects(PingObj, Map) of
-                ok ->  
-                    check_returned_source(Map, list_to_binary(aec_peers:uri(Peer))),
-                    {ok, Map};
-                Error ->
-                  Error
+                ok    -> {ok, Map};
+                Error -> Error
             end;
         {error, _Reason} = Error ->
             Error
@@ -158,18 +155,6 @@ parse_uri(Uri) ->
 process_request(Peer, Method, Endpoint, Params) ->
     BaseUri = aec_peers:uri(Peer) ++ "v1/",  %% TODO make this work for unicode
     aeu_http_client:request(BaseUri, Method, Endpoint, Params).
-
-check_returned_source(#{<<"source">> := Source}, Peer) ->
-    if Peer =/= Source ->
-            %% Consider Peer an alias of Source
-            %% (which should already be registered with aec_peers)
-            lager:debug("Source (~p) and Peer (~p) differ; adding alias",
-                        [Source, Peer]),
-            aec_peers:register_source(Source, Peer);
-       true ->
-            ok
-    end.
-
 
 -spec pp_uri({http_uri:schema(), http_uri:host(), http_uri:port()}) -> string().  %% TODO: | unicode:unicode_binary().
 pp_uri({Schema, Host, Port}) when is_binary(Host) ->
